@@ -9,5 +9,15 @@ const fetchAllUsers = async (page) => {
     throw error;
   }
 };
+const postCreateUser = async (name , job) => {
+  try {
+    const response = await axios.post('/api/users', name, job);
+    return response;
+  } catch (error) {
+    console.error('API Error:', error.message);
+    throw error;
+  }
+}
 
-export { fetchAllUsers };
+
+export { fetchAllUsers , postCreateUser };

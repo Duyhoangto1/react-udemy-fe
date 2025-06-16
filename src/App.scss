@@ -4,9 +4,9 @@ body {
   font-family: Arial, sans-serif;
   background-color: #f4f4f4;
   color: #333;
-  div {
-    color : red;
-  }
+  // div {
+  //   color : red;
+  // }
 }
 body {
   margin: 0;
@@ -20,4 +20,17 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+
+
+
+
+.app-container {
+.add-new {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+ 
+}
 }
