@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Table from "react-bootstrap/Table";
 import { fetchAllUsers } from "../services/UserService";
-
 import ReactPaginate from "react-paginate";
 import ModalAddNew from "./ModalAddNew";
 import ModalEdit from "./ModalEdit";
+import _, { debounce } from "lodash"; // Import lodash for deep cloning
+import ModalConfirm from "./ModalConfirm";
+
 function TableUsers() {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -12,18 +14,32 @@ function TableUsers() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [isShowModalAddNew, setIsShowModalAddNew] = useState(false);
   const [isShowModalEdit, setIsShowModalEdit] = useState(false);
+  const [isShowModalConfirm, setIsShowModalConfirm] = useState(false);
   const [data, setData] = useState([]);
+  const [dataDelete, setDataDelete] = useState([]);
+  const [sortBy, setSortBy] = useState("asc");
+  const [sortField, setSortField] = useState("id");
+  const [searchTerm, setSearchTerm] = useState(""); // Thêm trạng thái tìm kiếm
+
   useEffect(() => {
     getUsers();
-  }, [currentPage]);
+  }, [currentPage]); // Chỉ chạy khi currentPage thay đổi
 
   const getUsers = async () => {
     try {
       const response = await fetchAllUsers(currentPage);
       console.log("check response", response);
       if (response) {
-        setUsers(response.data); // Set to the data array directly
-        setTotalPages(response.total_pages); // Set total pages from response
+        let sortedUsers = [...response.data]; // Tạo bản sao để sắp xếp
+        if (sortField && sortBy) {
+          sortedUsers = _.orderBy(
+            sortedUsers,
+            [sortField],
+            [sortBy.toLowerCase()]
+          );
+        }
+        setUsers(sortedUsers);
+        setTotalPages(response.total_pages);
         setTotalUsers(response.total);
         console.log("Total ", response.total);
       } else {
@@ -44,27 +60,80 @@ function TableUsers() {
       setTotalPages(1);
     }
   };
+
   const handlePageClick = (data) => {
     const selectedPage = data.selected + 1; // ReactPaginate uses zero-based index
     setCurrentPage(selectedPage);
-    getUsers();
   };
+
   const handleAddNewUser = () => {
-    setIsShowModalAddNew(true); // Open modal when Add New is clicked
+    setIsShowModalAddNew(true); // Mở modal mà không ảnh hưởng đến currentPage
     console.log("Add New User button clicked");
   };
 
   const handleUpdateTable = (user) => {
-    setUsers((prevUsers) => [...prevUsers, user]); // Add new user to the lis
-    //getUsers(); // Refresh the user list after adding a new user
+    if (user.id) {
+      setUsers((prevUsers) => [...prevUsers, user]); // Thêm người dùng mới
+    } else {
+      setUsers((prevUsers) => prevUsers.filter((u) => u.id !== user)); // Xóa người dùng
+    }
+    // Không gọi getUsers() để tránh vòng lặp
   };
 
   const handleEditUser = (user) => {
-    setIsShowModalEdit(true); // Open edit modal when Edit is clicked
-    console.log("Edit User button clicked for user:", user);
-    setData(user); // Set the user data to be edited
-    // You can also pass the user data to the modal if needed
+    setIsShowModalEdit(true); // Mở modal chỉnh sửa
+    setData(user);
   };
+
+  const handleEditUserFormModal = (user) => {
+    let cloneList = _.cloneDeep(users);
+    let index = cloneList.findIndex((item) => item.id === user.id);
+    if (index !== -1) {
+      cloneList[index].first_name = user.first_name;
+      setUsers(cloneList);
+    }
+  };
+
+  const handleDeleteUser = (user) => {
+    setIsShowModalConfirm(true); // Mở modal xác nhận xóa
+    setDataDelete(user);
+  };
+
+  const handleDeleteUserFormModal = (userId) => {
+    let cloneList = _.cloneDeep(users);
+    cloneList = cloneList.filter((item) => item.id !== userId);
+    setUsers(cloneList);
+  };
+
+  const handleSort = (sortBy, sortField) => {
+    setSortBy(sortBy);
+    setSortField(sortField);
+    // Sắp xếp cục bộ thay vì gọi API lại
+    const sortedUsers = _.orderBy(users, [sortField], [sortBy.toLowerCase()]);
+    setUsers(sortedUsers);
+  };
+
+  // Sử dụng useCallback để tối ưu hóa debounce
+  const debouncedSearch = useCallback(
+    debounce((searchTerm) => {
+      if (!searchTerm) {
+        getUsers(); // Lấy lại danh sách gốc nếu không có từ khóa
+        return;
+      }
+      const filteredUsers = users.filter((user) =>
+        user.first_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setUsers(filteredUsers); // Cập nhật danh sách với kết quả lọc
+    }, 300), // Độ trễ 300ms
+    [users] // Phụ thuộc vào users để lọc trên dữ liệu hiện tại
+  );
+
+  const handleSearch = (event) => {
+    const value = event.target.value;
+    setSearchTerm(value); // Cập nhật trạng thái tìm kiếm
+    debouncedSearch(value); // Gọi hàm debounce với giá trị mới
+  };
+
   return (
     <div>
       <div className="my-3 add-new flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
@@ -72,17 +141,54 @@ function TableUsers() {
           List Users
         </span>
         <button
-          className="btn btn-success px-4 py-2 bg-gray-500  text-black rounded-lg"
+          className="btn btn-success px-4 py-2 bg-gray-500 text-black rounded-lg"
           onClick={handleAddNewUser}
         >
           Add New
         </button>
       </div>
+      <div className="text-center mb-3">
+        <input
+          type="text"
+          placeholder="Search by name"
+          className="form-control"
+          value={searchTerm} // Liên kết giá trị với trạng thái
+          onChange={handleSearch} // Gọi hàm tìm kiếm khi thay đổi
+        />
+      </div>
       <Table striped bordered hover>
         <thead>
           <tr>
-            <th>#</th>
-            <th>First Name</th>
+            <th>
+              <div className="sortable">
+                <span>ID</span>
+                <span className="sort-icon">
+                  <i
+                    className="fa-solid fa-arrow-up-long"
+                    onClick={() => handleSort("asc", "id")}
+                  />
+                  <i
+                    className="fa-solid fa-arrow-down-long"
+                    onClick={() => handleSort("desc", "id")}
+                  />
+                </span>
+              </div>
+            </th>
+            <th>
+              <div className="sortable">
+                <span>First Name</span>
+                <span className="sort-icon">
+                  <i
+                    className="fa-solid fa-arrow-up-long"
+                    onClick={() => handleSort("asc", "first_name")}
+                  />
+                  <i
+                    className="fa-solid fa-arrow-down-long"
+                    onClick={() => handleSort("desc", "first_name")}
+                  />
+                </span>
+              </div>
+            </th>
             <th>Last Name</th>
             <th>Username</th>
             <th>Action</th>
@@ -92,7 +198,7 @@ function TableUsers() {
           {users.length > 0 ? (
             users.map((user, index) => (
               <tr key={user.id}>
-                <td>{index + 1}</td>
+                <td>{index + 1 + (currentPage - 1) * 6}</td>
                 <td>{user.first_name}</td>
                 <td>{user.last_name}</td>
                 <td>
@@ -103,15 +209,13 @@ function TableUsers() {
                 <td>
                   <button
                     className="btn btn-primary mx-3"
-                    onClick={
-                      () => handleEditUser(user) // Open edit modal when Edit is clicked
-                    }
+                    onClick={() => handleEditUser(user)}
                   >
                     Edit
                   </button>
                   <button
-                    className="btn btn-danger "
-                    onClick={() => console.log("Delete user", user.id)}
+                    className="btn btn-danger"
+                    onClick={() => handleDeleteUser(user)}
                   >
                     Delete
                   </button>
@@ -120,7 +224,7 @@ function TableUsers() {
             ))
           ) : (
             <tr>
-              <td colSpan={4}>No users available or failed to load.</td>
+              <td colSpan={5}>No users available or failed to load.</td>
             </tr>
           )}
         </tbody>
@@ -155,8 +259,15 @@ function TableUsers() {
         show={isShowModalEdit}
         data={data}
         handleClose={() => setIsShowModalEdit(false)}
-        handleUpdateTable={handleUpdateTable}
+        handleEditUserFormModal={handleEditUserFormModal}
         handleShow={() => setIsShowModalEdit(true)}
+      />
+      <ModalConfirm
+        show={isShowModalConfirm}
+        handleClose={() => setIsShowModalConfirm(false)}
+        handleUpdateTable={handleUpdateTable}
+        handleDeleteUserFormModal={handleDeleteUserFormModal}
+        dataDelete={dataDelete}
       />
     </div>
   );

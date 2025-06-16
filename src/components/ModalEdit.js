@@ -2,38 +2,46 @@ import { useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
-import { postCreateUser } from "../services/UserService";
+import { putUpdateUser } from "../services/UserService";
 import { toast } from "react-toastify";
 
 function ModalEdit(props) {
   const [name, setName] = useState("");
   const [job, setJob] = useState("");
-  const { show, handleClose, handleSave, handleUpdateTable, data } = props;
+  const { show, handleClose, handleEditUserFormModal, data } = props;
   const handleEditUser = async () => {
-    const res = await postCreateUser(name, job);
-    if (res && res.id) {
-      console.log("Response from API:", res);
+    const res = await putUpdateUser(data.id, name, job); // thêm data.id
+    console.log("Response from API123:", res.updatedAt);
 
-      setName(""); // Reset name input
-      setJob(""); // Reset job input
-      handleClose(); // Close the modal
-      toast.success("User added successfully!");
-      handleUpdateTable({ first_name: name, id: res.id }); // Call the parent function to update the table
+    if (res && res.updatedAt) {
+      setName("");
+      setJob("");
+      handleClose();
+      toast.success("User updated successfully!");
+
+      handleEditUserFormModal({ id: data.id, first_name: name }); // Update user in table
     } else {
-      console.error("Error adding user:", res);
-      toast.error("Failed to add user. Please try again.");
+      console.error("Error updating user:", res);
+      toast.error("Failed to update user. Please try again.");
     }
   };
+
   useEffect(() => {
     if (show && data) {
       // If the modal is shown and data is available, set the name and job
       setName(data.first_name || ""); // Use empty string if first_name is undefined
-      setJob(data.last_name || ""); // Use empty string if last_name is undefined
+      setJob(data.last_name || ""); // Use empty string if job is undefined
     }
   }, [data]);
   return (
     <>
-      <Modal show={show} onHide={handleClose} centered>
+      <Modal
+        show={show}
+        onHide={handleClose}
+        centered
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header
           closeButton
           className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"

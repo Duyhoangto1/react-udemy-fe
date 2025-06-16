@@ -27,7 +27,13 @@ function ModalAddNew(props) {
   };
   return (
     <>
-      <Modal show={show} onHide={handleClose} centered>
+      <Modal
+        show={show}
+        onHide={handleClose}
+        centered
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header
           closeButton
           className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
