@@ -4,10 +4,11 @@ import { fetchAllUsers } from "../services/UserService";
 import ReactPaginate from "react-paginate";
 import ModalAddNew from "./ModalAddNew";
 import ModalEdit from "./ModalEdit";
-import _, { debounce } from "lodash"; // Import lodash for deep cloning
+import _, { debounce } from "lodash"; 
 import ModalConfirm from "./ModalConfirm";
-import { CSVLink, CSVDownload } from "react-csv";
+import { CSVLink } from "react-csv";
 import Papa from "papaparse";
+
 function TableUsers() {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -20,69 +21,55 @@ function TableUsers() {
   const [dataDelete, setDataDelete] = useState([]);
   const [sortBy, setSortBy] = useState("asc");
   const [sortField, setSortField] = useState("id");
-  const [searchTerm, setSearchTerm] = useState(""); // Thêm trạng thái tìm kiếm
+  const [searchTerm, setSearchTerm] = useState(""); 
   const [dataExport, setDataExport] = useState([]);
+
   useEffect(() => {
     getUsers();
-  }, [currentPage]); // Chỉ chạy khi currentPage thay đổi
+  }, [currentPage]);
 
   const getUsers = async () => {
     try {
       const response = await fetchAllUsers(currentPage);
-      console.log("check response", response);
       if (response) {
-        let sortedUsers = [...response.data]; // Tạo bản sao để sắp xếp
+        let sortedUsers = [...response.data];
         if (sortField && sortBy) {
-          sortedUsers = _.orderBy(
-            sortedUsers,
-            [sortField],
-            [sortBy.toLowerCase()]
-          );
+          sortedUsers = _.orderBy(sortedUsers, [sortField], [sortBy.toLowerCase()]);
         }
         setUsers(sortedUsers);
         setTotalPages(response.total_pages);
         setTotalUsers(response.total);
-        console.log("Total ", response.total);
       } else {
         setUsers([]);
         setTotalPages(1);
         setTotalUsers(0);
       }
     } catch (error) {
-      console.error(
-        "Error fetching users:",
-        error.message,
-        error.response?.data
-      );
-      if (error.response?.status === 401) {
-        console.log("Unauthorized: Check API key");
-      }
+      console.error("Error fetching users:", error.message);
       setUsers([]);
       setTotalPages(1);
     }
   };
 
   const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1; // ReactPaginate uses zero-based index
+    const selectedPage = data.selected + 1;
     setCurrentPage(selectedPage);
   };
 
   const handleAddNewUser = () => {
-    setIsShowModalAddNew(true); // Mở modal mà không ảnh hưởng đến currentPage
-    console.log("Add New User button clicked");
+    setIsShowModalAddNew(true);
   };
 
   const handleUpdateTable = (user) => {
     if (user.id) {
-      setUsers((prevUsers) => [...prevUsers, user]); // Thêm người dùng mới
+      setUsers((prevUsers) => [...prevUsers, user]);
     } else {
-      setUsers((prevUsers) => prevUsers.filter((u) => u.id !== user)); // Xóa người dùng
+      setUsers((prevUsers) => prevUsers.filter((u) => u.id !== user));
     }
-    // Không gọi getUsers() để tránh vòng lặp
   };
 
   const handleEditUser = (user) => {
-    setIsShowModalEdit(true); // Mở modal chỉnh sửa
+    setIsShowModalEdit(true);
     setData(user);
   };
 
@@ -96,7 +83,7 @@ function TableUsers() {
   };
 
   const handleDeleteUser = (user) => {
-    setIsShowModalConfirm(true); // Mở modal xác nhận xóa
+    setIsShowModalConfirm(true);
     setDataDelete(user);
   };
 
@@ -109,42 +96,40 @@ function TableUsers() {
   const handleSort = (sortBy, sortField) => {
     setSortBy(sortBy);
     setSortField(sortField);
-    // Sắp xếp cục bộ thay vì gọi API lại
     const sortedUsers = _.orderBy(users, [sortField], [sortBy.toLowerCase()]);
     setUsers(sortedUsers);
   };
 
-  // Sử dụng useCallback để tối ưu hóa debounce
   const debouncedSearch = useCallback(
     debounce((searchTerm) => {
       if (!searchTerm) {
-        getUsers(); // Lấy lại danh sách gốc nếu không có từ khóa
+        getUsers();
         return;
       }
       const filteredUsers = users.filter((user) =>
         user.first_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setUsers(filteredUsers); // Cập nhật danh sách với kết quả lọc
-    }, 300), // Độ trễ 300ms
-    [users] // Phụ thuộc vào users để lọc trên dữ liệu hiện tại
+      setUsers(filteredUsers);
+    }, 300),
+    [users]
   );
 
   const handleSearch = (event) => {
     const value = event.target.value;
-    setSearchTerm(value); // Cập nhật trạng thái tìm kiếm
-    debouncedSearch(value); // Gọi hàm debounce với giá trị mới
+    setSearchTerm(value);
+    debouncedSearch(value);
   };
+
   const getDataExport = async (event, done) => {
     let result = [];
     if (users.length > 0) {
       result.push(["ID", "Email", "First Name", "Last Name"]);
-      users.map((user, index) => {
+      users.map((user) => {
         let arr = [];
         arr[0] = user.id;
         arr[1] = user.email;
         arr[2] = user.first_name;
         arr[3] = user.last_name;
-
         result.push(arr);
       });
       setDataExport(result);
@@ -166,19 +151,18 @@ function TableUsers() {
         });
         const data = parsedCSV.data;
         if (data.length > 0) {
-          const newUsers = data.map((row) => {
-            return {
-              id: row.ID,
-              email: row.email,
-              first_name: row.first_name,
-              last_name: row.last_name,
-            };
-          });
+          const newUsers = data.map((row) => ({
+            id: row.ID,
+            email: row.email,
+            first_name: row.first_name,
+            last_name: row.last_name,
+          }));
           setUsers((prevUsers) => [...prevUsers, ...newUsers]);
         }
       };
     }
   };
+
   return (
     <div>
       <div className="my-3 add-new flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
@@ -194,7 +178,7 @@ function TableUsers() {
               type="file"
               id="file-upload"
               hidden
-              onChange={(event) => handleImportCSV(event)}
+              onChange={handleImportCSV}
             />
             <i className="fa fa-file-excel"></i> Export to Excel
           </label>
@@ -210,7 +194,6 @@ function TableUsers() {
               <i className="fa fa-download "></i> Download CSV
             </button>
           </CSVLink>
-          {/* <CSVDownload data={users} filename="users.csv" /> */}
           <button
             className="btn btn-success px-4 py-2 bg-gray-500 text-black rounded-lg"
             onClick={handleAddNewUser}
@@ -224,8 +207,8 @@ function TableUsers() {
           type="text"
           placeholder="Search by name"
           className="form-control"
-          value={searchTerm} // Liên kết giá trị với trạng thái
-          onChange={handleSearch} // Gọi hàm tìm kiếm khi thay đổi
+          value={searchTerm}
+          onChange={handleSearch}
         />
       </div>
       <Table striped bordered hover>

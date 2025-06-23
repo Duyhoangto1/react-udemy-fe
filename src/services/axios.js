@@ -24,11 +24,17 @@ axiosInstance.interceptors.response.use(
   function (response) {
     // Any status code that lie within the range of 2xx cause this function to trigger
     // Do something with response data
-    console.log("Response received: ", response);
+
     return response.data ? response.data : { statusCode: response.status }; // Return response data or the whole response
   },
   function (error) {
-    return Promise.reject(error);
+    let res = {};
+    if (error.response) {
+      res.response = error.response.data;
+      res.status = error.response.status;
+      res.headers = error.response.headers;
+    }
+    return res;
   }
 );
 
