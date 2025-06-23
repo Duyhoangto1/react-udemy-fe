@@ -5,31 +5,23 @@ import NavDropdown from "react-bootstrap/NavDropdown";
 import { NavLink, useNavigate } from "react-router-dom";
 import logoApp from "../assets/images/logo192.png"; // Import logo từ assets
 import { toast } from "react-toastify";
-import { useContext, useState, useEffect } from "react";
-import { UserContext } from "../context/UserContext";
-
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useState } from "react";
+import { logoutUserRedux } from "../redux/actions/UserAction";
 function Header() {
-  const { handleLogout, user } = useContext(UserContext);
+  const user = useSelector((state) => state.user.account);
   const navigate = useNavigate();
-  const [hideHeader, setHideHeader] = useState(false);
+  const dispatch = useDispatch();
   const handleLogoutClick = () => {
-    handleLogout();
-    toast.success("You have been logged out successfully!");
-    navigate("/");
-    // Reload sau 1 giây để đảm bảo state được cập nhật
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+    dispatch(logoutUserRedux());
   };
-  console.log(user);
-
   useEffect(() => {
-    if (window.location.pathname === "/login") {
-      setHideHeader(true);
-    } else {
-      setHideHeader(false);
+    if (user && user.auth === false && window.location.pathname !== "/login") {
+      navigate("/");
+      toast.success("You have been logged out successfully!");
     }
-  }, []);
+  }, [user]);
+
   return (
     <Navbar expand="lg" className="bg-body-tertiary">
       <Container>

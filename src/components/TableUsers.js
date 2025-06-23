@@ -6,7 +6,7 @@ import ModalAddNew from "./ModalAddNew";
 import ModalEdit from "./ModalEdit";
 import _, { debounce } from "lodash"; // Import lodash for deep cloning
 import ModalConfirm from "./ModalConfirm";
-import { CSVLink, CSVDownload } from "react-csv";
+import { CSVLink } from "react-csv";
 import Papa from "papaparse";
 function TableUsers() {
   const [users, setUsers] = useState([]);

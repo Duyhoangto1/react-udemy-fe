@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import {
   Container,
   Row,
@@ -11,44 +11,30 @@ import {
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash, faSync } from "@fortawesome/free-solid-svg-icons";
-import { loginUser } from "../services/UserService";
-import { toast } from "react-toastify";
-import { UserContext } from "../context/UserContext";
 
+import { toast } from "react-toastify";
+
+import { useDispatch, useSelector } from "react-redux";
+import { loginUserRedux } from "../redux/actions/UserAction";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false); // Thêm trạng thái loading
+  const isLoading = useSelector((state) => state.user.isLoading);
   const navigate = useNavigate();
-  const { handleLogin } = useContext(UserContext);
+  const dispatch = useDispatch();
   // Kiểm tra xem nút Login có nên active không
   const isFormValid = email.trim() !== "" && password.trim() !== "";
-
+  const account = useSelector((state) => state.user.account);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Bắt đầu loading khi gửi yêu cầu
+
     try {
-      const response = await loginUser(email, password);
-      console.log(response);
-      if (response && response.status === 400) {
-        setError(response.error);
-        toast.error(response.response.error);
-        return;
-      } else {
-        toast.success("Login successfully!");
-      }
-      if (response && response.token) {
-        navigate("/");
-        handleLogin(email, response.token);
-      }
-      navigate("/");
+      dispatch(loginUserRedux(email, password));
     } catch (error) {
       console.error("Error:", error.message);
       setError("An error occurred. Please try again.");
-    } finally {
-      setLoading(false); // Kết thúc loading sau khi hoàn tất
     }
   };
   const handlePressEnter = (e) => {
@@ -56,6 +42,12 @@ const Login = () => {
       handleSubmit(e);
     }
   };
+  useEffect(() => {
+    if (account && account?.auth === true) {
+      navigate("/");
+    }
+  }, [account]);
+
   return (
     <Container
       className="justify-content-center align-items-center min-vh-100 login-container"
@@ -126,16 +118,16 @@ const Login = () => {
                   cursor: isFormValid ? "pointer" : "not-allowed",
                 }}
                 onMouseOver={(e) => {
-                  if (isFormValid && !loading)
+                  if (isFormValid && !isLoading)
                     e.currentTarget.style.backgroundColor = "#0056b3";
                 }}
                 onMouseOut={(e) => {
-                  if (isFormValid && !loading)
+                  if (isFormValid && !isLoading)
                     e.currentTarget.style.backgroundColor = "";
                 }}
-                disabled={!isFormValid || loading} // Vô hiệu hóa khi không hợp lệ hoặc loading
+                disabled={!isFormValid || isLoading} // Vô hiệu hóa khi không hợp lệ hoặc loading
               >
-                {loading ? <FontAwesomeIcon icon={faSync} spin /> : "Login"}
+                {isLoading ? <FontAwesomeIcon icon={faSync} spin /> : "Login"}
               </Button>
               <p className="text-center mb-0">
                 Don’t have an account?{" "}

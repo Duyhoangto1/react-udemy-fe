@@ -2,24 +2,26 @@ import { Container } from "react-bootstrap";
 import "./App.scss";
 import Header from "./components/Header";
 
-import { BrowserRouter as Router } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-toastify/dist/ReactToastify.css";
 
-import { UserContext } from "./context/UserContext";
-import { useContext, useEffect } from "react";
 import AppRoute from "./routers/AppRoute";
+import { useDispatch, useSelector } from "react-redux";
+import { handleRefresh } from "./redux/actions/UserAction";
+import { useEffect } from "react";
 
 function App() {
-  const { user, handleLogin } = useContext(UserContext);
+  const datauserRedux = useSelector((state) => state.user.account);
+  console.log("check redux", datauserRedux);
+  const dispatch = useDispatch();
   useEffect(() => {
     if (localStorage.getItem("token")) {
-      handleLogin(localStorage.getItem("email"), localStorage.getItem("token"));
+      dispatch(handleRefresh());
     }
   }, []);
   return (
-    <Router>
+    <>
       <div className="app-container min-h-screen bg-gradient-to-br from-navy-900 to-navy-700">
         <Header />
         <Container className="py-6">
@@ -38,7 +40,7 @@ function App() {
         pauseOnHover
         theme="light"
       />
-    </Router>
+    </>
   );
 }
 
